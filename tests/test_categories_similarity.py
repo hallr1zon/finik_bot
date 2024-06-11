@@ -19,19 +19,20 @@ class TestCategoriesSimilarity(unittest.TestCase):
     def test_merge_similarities_for_containing(self):
         words = ["apple", "bigapple", "banana", "bananacake", "carrot"]
         instance = CategoriesSimilarity(words)
-        expected_result = {
-            "apple": ["apple", "bigapple"],
-            "carrot": ["carrot"],
-            "banana": ["banana", "bananacake"]
-        }
+        expected_result = {"apple": ["apple", "bigapple"], "carrot": ["carrot"], "banana": ["banana", "bananacake"]}
 
         self.assertEqual(instance._merge_similarities_to_dict(use_similarity=False), expected_result)
 
     def test_process(self):
         words = ["кафе", "кафешка", "кава", "кава в кафе", "продукти", "магазин", "Баба балувана"]
         instance = CategoriesSimilarity(words)
-        expected_result = {'кафе': ['кафе', 'кафешка', 'кава в кафе'], 'кава': ['кава'], 'магазин': ['магазин'],
-                           'продукти': ['продукти'], 'Баба балувана': ['Баба балувана']}
+        expected_result = {
+            'кафе': ['кафе', 'кафешка', 'кава в кафе'],
+            'кава': ['кава'],
+            'магазин': ['магазин'],
+            'продукти': ['продукти'],
+            'Баба балувана': ['Баба балувана'],
+        }
 
         self.assertEqual(instance.process(), expected_result)
 

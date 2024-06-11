@@ -1,22 +1,23 @@
 import asyncio
+import logging
 import os
+import tempfile
 
+import matplotlib.pyplot as plt
 import pandas as pd
 from aiogram import types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, FSInputFile
-from tortoise import Tortoise, run_async, fields, Model
-from tortoise.functions import Sum
-import tempfile
-from app.utils import CategoriesSimilarity, get_this_month_filter, get_this_day_filter
-
-from app.keyboards import start_kb, cancel_kb, process_pagination_keyboard
-import matplotlib.pyplot as plt
+from aiogram.types import FSInputFile, Message
 from dotenv import dotenv_values
-
-env_vars = dotenv_values(".env")
+from tortoise import Model, Tortoise, fields, run_async
+from tortoise.functions import Sum
 
 from app import constants as const
+from app.keyboards import cancel_kb, process_pagination_keyboard, start_kb
+from app.utils import (CategoriesSimilarity, get_this_day_filter,
+                       get_this_month_filter)
+
+env_vars = dotenv_values(".env")
 
 
 class User(Model):
@@ -55,18 +56,11 @@ class Transaction(Model):
     date = fields.DatetimeField(auto_now_add=True)
 
     @classmethod
-    async def all_records(
-            cls, message: Message, state: FSMContext, pagination_num=1, next=True
-    ):
+    async def all_records(cls, message: Message, state: FSMContext, pagination_num=1, next=True):
         pagination_num = int(pagination_num)
         limit = 4
         offset = (pagination_num - 1) * 4
-        records = (
-            await cls.filter(user__telegram_id=message.chat.id)
-            .order_by("-date")
-            .limit(limit)
-            .offset(offset)
-        )
+        records = await cls.filter(user__telegram_id=message.chat.id).order_by("-date").limit(limit).offset(offset)
         if len(records) == 0:
             await message.answer(const.DIALOG_NO_RECORDS, reply_markup=start_kb)
             return
@@ -81,9 +75,7 @@ class Transaction(Model):
                     ),
                 ]
             ]
-            keyboard = types.InlineKeyboardMarkup(
-                inline_keyboard=buttons, resize_keyboard=False
-            )
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons, resize_keyboard=False)
             await message.answer(
                 f'| Дата ->{r.date.strftime("%d:%m:%Y")}|\n| {r.category} {float(r.amount)}грн',
                 reply_markup=keyboard,
@@ -91,15 +83,11 @@ class Transaction(Model):
         if next:
             next = pagination_num + 1 if len(records) > 0 else pagination_num
             prev = pagination_num - 1 if next == pagination_num else pagination_num
-            await message.answer(
-                "------", reply_markup=process_pagination_keyboard(prev, next)
-            )
+            await message.answer("------", reply_markup=process_pagination_keyboard(prev, next))
         else:
             prev = 1 if pagination_num == 1 else pagination_num - 1
             current = 2 if pagination_num == 1 else pagination_num
-            await message.answer(
-                "------", reply_markup=process_pagination_keyboard(prev, current)
-            )
+            await message.answer("------", reply_markup=process_pagination_keyboard(prev, current))
 
     @classmethod
     async def prepare_amount(cls, message: Message, state: FSMContext):
@@ -113,15 +101,14 @@ class Transaction(Model):
             return
 
         await state.update_data(amount=amount)
-        text = (
-            const.DIALOG_WHAT_CATEGORY
-        )
+        text = const.DIALOG_WHAT_CATEGORY
         await message.answer(text, reply_markup=cancel_kb)
         await state.set_state(FormRecord.category)
 
     @classmethod
     async def prepare_category(cls, message: Message, state: FSMContext):
         from main import FormRecord
+
         await state.update_data(category=message.text)
         await message.answer(const.DIALOG_DESCRIBE_CATEGORY, reply_markup=cancel_kb)
         await state.set_state(FormRecord.description)
@@ -135,7 +122,8 @@ class Transaction(Model):
             await Transaction.create(**data, user_id=user.id)
             await state.clear()
             await message.answer(const.DIALOG_SUCCESS_ADD, reply_markup=start_kb)
-        except:
+        except Exception as e:
+            logging.error(e)
             await message.answer(const.DIALOG_DECLINE_ADD, reply_markup=start_kb)
 
     @classmethod
@@ -171,9 +159,7 @@ class Transaction(Model):
     async def csv_month_report(cls, message: Message):
         user = await User.get(telegram_id=message.chat.id)
         month_filter = get_this_month_filter()
-        res = await cls.filter(user_id=user.id, **month_filter).values(
-            "date", "amount", "category", "description"
-        )
+        res = await cls.filter(user_id=user.id, **month_filter).values("date", "amount", "category", "description")
         await asyncio.sleep(0)
         df = pd.DataFrame(res)
 
@@ -198,9 +184,7 @@ class Transaction(Model):
         df.to_csv(temp_file.name, index=False)
         temp_file.close()
 
-        await message.answer_document(
-            FSInputFile(temp_file.name, os.path.split(temp_file.name)[1])
-        )
+        await message.answer_document(FSInputFile(temp_file.name, os.path.split(temp_file.name)[1]))
         os.remove(temp_file.name)
 
     @classmethod
@@ -228,9 +212,7 @@ class Transaction(Model):
             await message.answer(const.DIALOG_NO_TRANSACTION, reply_markup=start_kb)
             return
 
-        cat_names = await Transaction.filter(user_id=user.id).values_list(
-            "category", flat=True
-        )
+        cat_names = await Transaction.filter(user_id=user.id).values_list("category", flat=True)
         cs = CategoriesSimilarity(words=set(cat_names))
         categories = cs.process()
 
@@ -260,9 +242,7 @@ class Transaction(Model):
         temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         plt.savefig(temp_file.name)
         temp_file.close()
-        await message.answer_photo(
-            photo=FSInputFile(temp_file.name, os.path.split(temp_file.name)[1])
-        )
+        await message.answer_photo(photo=FSInputFile(temp_file.name, os.path.split(temp_file.name)[1]))
         os.remove(temp_file.name)
 
 
@@ -272,9 +252,7 @@ async def init():
     else:
         url = f"postgres://{env_vars["DB_USER"]}:{env_vars["DB_PASSWORD"]}@localhost:5432/{env_vars["DB_NAME"]}"
 
-    await Tortoise.init(
-        db_url=url, modules={"models": ["app.models.models"]}
-    )
+    await Tortoise.init(db_url=url, modules={"models": ["app.models.models"]})
     await Tortoise.generate_schemas()
 
 

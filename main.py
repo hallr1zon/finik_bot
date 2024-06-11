@@ -13,19 +13,19 @@ except ModuleNotFoundError:
 
 from os import getenv
 
-from aiogram import Bot, Dispatcher, types, F
+from aiogram import Bot, Dispatcher, F, types
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from dotenv import load_dotenv
 
 from app import constants as const
 from app.actions import ACTIONS
-from app.models.models import User, Transaction
-from app.keyboards import start_kb, cancel_kb
+from app.keyboards import cancel_kb, start_kb
+from app.models.models import Transaction, User
 
 load_dotenv()
 
@@ -90,12 +90,12 @@ async def update_budget(message: types.Message):
     await message.answer(f"💳Ліміт: {user.monthly_limit} грн", reply_markup=keyboard)
 
 
-@dp.callback_query(lambda c: c.data == 'change_limit')
-async def process_callback_button1(callback_query: types.CallbackQuery, state):
+@dp.callback_query(lambda c: c.data == "change_limit")
+async def process_callback_button0(callback_query: types.CallbackQuery, state):
     await bot.send_message(
         callback_query.message.chat.id,
         text=const.DIALOG_SET_NEW_VALUE,
-        reply_markup=types.ReplyKeyboardRemove()
+        reply_markup=types.ReplyKeyboardRemove(),
     )
     await state.set_state(NewMonthlyLimit.amount)
 
@@ -114,29 +114,29 @@ async def monthly_costs(message: types.Message):
         ],
         [
             types.InlineKeyboardButton(text="CSV звіт за місяць", callback_data="csv_report"),
-        ]
+        ],
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    await message.answer(f"Витрати за", reply_markup=keyboard)
+    await message.answer("Витрати за", reply_markup=keyboard)
 
 
-@dp.callback_query(lambda c: c.data == 'day_analytics')
+@dp.callback_query(lambda c: c.data == "day_analytics")
 async def process_callback_button1(callback_query: types.CallbackQuery):
     await Transaction.day_report(callback_query.message)
 
 
-@dp.callback_query(lambda c: c.data == 'month_analytics')
-async def process_callback_button1(callback_query: types.CallbackQuery):
+@dp.callback_query(lambda c: c.data == "month_analytics")
+async def process_callback_button2(callback_query: types.CallbackQuery):
     await Transaction.month_report(callback_query.message)
 
 
-@dp.callback_query(lambda c: c.data == 'csv_report')
-async def process_callback_button1(callback_query: types.CallbackQuery):
+@dp.callback_query(lambda c: c.data == "csv_report")
+async def process_callback_button3(callback_query: types.CallbackQuery):
     await Transaction.csv_month_report(callback_query.message)
 
 
 @dp.message(F.text.lower() == ACTIONS[const.MONTHLY_ANALYTICS].lower())
-async def monthly_costs(message: types.Message):
+async def monthly_costs2(message: types.Message):
     await Transaction.month_analytics(message)
 
 
@@ -145,25 +145,28 @@ async def all_records(message: types.Message, state):
     await Transaction.all_records(message, state)
 
 
-@dp.callback_query(lambda c: re.match(r'record_\d+', c.data))
-async def process_callback_button1(callback_query: types.CallbackQuery, _):
+@dp.callback_query(lambda c: re.match(r"record_\d+", c.data))
+async def process_callback_button4(callback_query: types.CallbackQuery, _):
     record_id = callback_query.data.split("_")[-1]
     tr = await Transaction.get(id=record_id)
 
     await tr.delete()
     await callback_query.bot.delete_message(callback_query.message.chat.id, callback_query.message.message_id)
-    await callback_query.bot.answer_callback_query(callback_query.id, const.DIALOG_DELETE_RECORD, )
+    await callback_query.bot.answer_callback_query(
+        callback_query.id,
+        const.DIALOG_DELETE_RECORD,
+    )
 
 
-@dp.message(F.text.regexp(f'.*{const.DIALOG_LEFT_PAGINATION}'))
-async def process_callback_button1(message: types.Message, state):
-    pagination_num = message.text.split('<-')[0]
+@dp.message(F.text.regexp(f".*{const.DIALOG_LEFT_PAGINATION}"))
+async def process_callback_button5(message: types.Message, state):
+    pagination_num = message.text.split("<-")[0]
     await Transaction.all_records(message, state, pagination_num=pagination_num, next=False)
 
 
-@dp.message(F.text.regexp(f'{const.DIALOG_RIGHT_PAGINATION}.*'))
-async def process_callback_button1(message: types.Message, state):
-    pagination_num = message.text.split('->')[-1]
+@dp.message(F.text.regexp(f"{const.DIALOG_RIGHT_PAGINATION}.*"))
+async def process_callback_button6(message: types.Message, state):
+    pagination_num = message.text.split("->")[-1]
     await Transaction.all_records(message, state, pagination_num=pagination_num)
 
 
@@ -173,6 +176,7 @@ async def bot_pulling() -> None:
 
 async def db_init() -> None:
     from app.models.models import init
+
     await init()
 
 
@@ -180,21 +184,21 @@ async def notification_init() -> None:
     from app.models.models import User
 
     async def _send_message() -> None:
-        users = await User.all().values_list('telegram_id', flat=True)
+        users = await User.all().values_list("telegram_id", flat=True)
         message = "Привіт☺️\nБули нові витрати💸?"
         for user in users:
             await asyncio.sleep(0)
             try:
                 await bot.send_message(str(user), message)
-            except:
-                logging.error(f"Error sending to {user}")
+            except Exception as e:
+                logging.error(f"Error sending to {user}\n {e}")
 
         await asyncio.sleep(60 * 60)
 
     while True:
         await asyncio.sleep(60 * 5)
 
-        kiev_timezone = pytz.timezone('Europe/Kiev')
+        kiev_timezone = pytz.timezone("Europe/Kiev")
         current_time_kiev = datetime.now(kiev_timezone)
 
         mid_st = current_time_kiev.replace(hour=14, minute=0, second=0, microsecond=0)
@@ -208,11 +212,7 @@ async def notification_init() -> None:
 
 
 async def main() -> None:
-    await asyncio.gather(
-        bot_pulling(),
-        db_init(),
-        notification_init()
-    )
+    await asyncio.gather(bot_pulling(), db_init(), notification_init())
 
 
 if __name__ == "__main__":

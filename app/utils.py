@@ -45,11 +45,7 @@ class CategoriesSimilarity:
             for j, word2 in enumerate(self.words):
                 if j == i or j in used_indices:
                     continue
-                if (
-                        (use_similarity and self._similarity(word1, word2) > threshold)
-                        or word1 in word2
-                        or word2 in word1
-                ):
+                if (use_similarity and self._similarity(word1, word2) > threshold) or word1 in word2 or word2 in word1:
                     similar_words.append(word2)
                     used_indices.add(j)
 
