@@ -20,7 +20,6 @@ This project is a Telegram bot designed to help users manage their personal fina
         <li><strong>Python:</strong> The bot is written in Python, taking advantage of its extensive libraries and features.</li>
         <li><strong>aiogram:</strong> A Python library for building Telegram bots, used for handling updates and interactions with the Telegram Bot API.</li>
         <li><strong>Tortoise-ORM:</strong> An easy-to-use asyncio ORM (Object Relational Mapper) inspired by Django, used for async database interactions.</li>
-        <li><strong>SQLite:</strong> A C-language library that implements a small, fast, self-contained, high-reliability, full-featured, SQL database engine.</li>
         <li><strong>Pandas:</strong> A fast, powerful, flexible, and easy-to-use open-source data analysis and manipulation tool.</li>
         <li><strong>Matplotlib:</strong> A comprehensive library for creating static, animated, and interactive visualizations in Python.</li>
     </ul>
@@ -37,10 +36,6 @@ pip install -r requirements.txt</code></pre>
     <p>Create a .env file in the root directory of the project.</p>
     <p>Add your Telegram bot token:</p>
     <pre><code class="language-makefile">BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN</code></pre>
-    <h3>Initialize the Database:</h3>
-    <p>Run the script to initialize the SQLite database:</p>
-    <pre><code class="language-bash">python &lt;script_to_initialize_db.py&gt;</code></pre>
-    <p>This will create a SQLite database file in your project directory.</p>
     <h3>Start the Bot:</h3>
     <p>Run the bot script:</p>
     <pre><code class="language-bash">python bot.py</code></pre>
