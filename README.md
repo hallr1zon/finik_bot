@@ -35,7 +35,14 @@ pip install -r requirements.txt</code></pre>
     <h3>Environment Variables:</h3>
     <p>Create a .env file in the root directory of the project.</p>
     <p>Add your Telegram bot token:</p>
-    <pre><code class="language-makefile">BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN</code></pre>
+    <pre>
+        <code class="language-makefile">BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN</code>
+        <code class="language-makefile">DB_NAME=YOUR_DATABASE_NAME</code>
+        <code class="language-makefile">DB_USER=YOUR_DATABASE_USER</code>
+        <code class="language-makefile">DB_PASSWORD=YOUR_DATABASE_PASSWORD</code>
+        <code class="language-makefile">DB_HOST=YOUR_DATABASE_HOST</code>
+        <code class="language-makefile">DB_PORT=YOUR_DATABASE_PORT</code>
+    </pre>
     <h3>Start the Bot:</h3>
     <p>Run the bot script:</p>
     <pre><code class="language-bash">python bot.py</code></pre>
