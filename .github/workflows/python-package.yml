@@ -30,6 +30,6 @@ jobs:
     - name: Lint with flake8
       run: |
         flake8 --config=.flake8
-    - name: Test with pytest
+    - name: Test with unittest
       run: |
-        pytest
+        python -m unittest tests
