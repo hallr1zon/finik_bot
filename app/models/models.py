@@ -12,6 +12,9 @@ from app.utils import CategoriesSimilarity, get_this_month_filter, get_this_day_
 
 from app.keyboards import start_kb, cancel_kb, process_pagination_keyboard
 import matplotlib.pyplot as plt
+from dotenv import dotenv_values
+
+env_vars = dotenv_values(".env")
 
 from app import constants as const
 
@@ -146,6 +149,10 @@ class Transaction(Model):
             .values("user_id", "sum")
         )
         res = 0 if len(res) == 0 else float(res[0]["sum"])
+
+        if res == 0:
+            text = "Немає даних"
+
         if user.monthly_limit < res:
             text = (
                 f"❗️Ви перевищили витрати на місяць біль ніж на {res - user.monthly_limit} грн\n"
@@ -169,6 +176,11 @@ class Transaction(Model):
         )
         await asyncio.sleep(0)
         df = pd.DataFrame(res)
+
+        if len(df) == 0:
+            await message.answer("Немає даних!")
+            return
+
         df["date"] = df["date"].dt.strftime("%d, %m, %Y")
         df["amount"] = df["amount"].astype(float)
         df["amount"] = df["amount"].round(2)
@@ -255,8 +267,13 @@ class Transaction(Model):
 
 
 async def init():
+    if int(env_vars["RUN_DOCKER"]):
+        url = f"postgres://{env_vars["DB_USER"]}:{env_vars["DB_PASSWORD"]}@{env_vars["DB_HOST"]}:5432/{env_vars["DB_NAME"]}"
+    else:
+        url = f"postgres://{env_vars["DB_USER"]}:{env_vars["DB_PASSWORD"]}@localhost:5432/{env_vars["DB_NAME"]}"
+
     await Tortoise.init(
-        db_url="sqlite://db.sqlite3", modules={"models": ["app.models.models"]}
+        db_url=url, modules={"models": ["app.models.models"]}
     )
     await Tortoise.generate_schemas()
 

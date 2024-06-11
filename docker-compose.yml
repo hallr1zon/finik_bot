@@ -1,12 +1,33 @@
-version: '3'
 services:
+
+  db:
+    container_name: finik_db
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+    environment:
+      - POSTGRES_USER=$DB_USER
+      - POSTGRES_PASSWORD=$DB_PASSWORD
+      - POSTGRES_DB=$DB_NAME
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+
   finik:
     build:
       context: .
       dockerfile: Dockerfile
     image: finik_bot
+    restart: always
     volumes:
       - ./main.py:/app/main.py
     environment:
       - PYTHONUNBUFFERED=1
     command: [ "python", "main.py" ]
+
+
+volumes:
+  postgres_data:
