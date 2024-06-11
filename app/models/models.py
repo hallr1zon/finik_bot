@@ -14,8 +14,7 @@ from tortoise.functions import Sum
 
 from app import constants as const
 from app.keyboards import cancel_kb, process_pagination_keyboard, start_kb
-from app.utils import (CategoriesSimilarity, get_this_day_filter,
-                       get_this_month_filter)
+from app.utils import CategoriesSimilarity, get_this_day_filter, get_this_month_filter
 
 env_vars = dotenv_values(".env")
 
@@ -247,10 +246,15 @@ class Transaction(Model):
 
 
 async def init():
+    db_user = env_vars["DB_USER"]
+    password = env_vars["DB_PASSWORD"]
+    host = env_vars["DB_HOST"]
+    db_name = env_vars["DB_NAME"]
+
     if int(env_vars["RUN_DOCKER"]):
-        url = f"postgres://{env_vars["DB_USER"]}:{env_vars["DB_PASSWORD"]}@{env_vars["DB_HOST"]}:5432/{env_vars["DB_NAME"]}"
+        url = f"postgres://{db_user}:{password}@{host}:5432/{db_name}"
     else:
-        url = f"postgres://{env_vars["DB_USER"]}:{env_vars["DB_PASSWORD"]}@localhost:5432/{env_vars["DB_NAME"]}"
+        url = f"postgres://{db_user}:{password}@localhost:5432/{db_name}"
 
     await Tortoise.init(db_url=url, modules={"models": ["app.models.models"]})
     await Tortoise.generate_schemas()
