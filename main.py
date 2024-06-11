@@ -2,6 +2,9 @@ import asyncio
 import logging
 import re
 import sys
+from datetime import datetime
+
+import pytz
 
 try:
     import uvloop
@@ -173,10 +176,42 @@ async def db_init() -> None:
     await init()
 
 
+async def notification_init() -> None:
+    from app.models.models import User
+
+    async def _send_message() -> None:
+        users = await User.all().values_list('telegram_id', flat=True)
+        message = "Привіт☺️\nБули нові витрати💸?"
+        for user in users:
+            await asyncio.sleep(0)
+            try:
+                await bot.send_message(str(user), message)
+            except:
+                logging.error(f"Error sending to {user}")
+
+        await asyncio.sleep(60 * 60)
+
+    while True:
+        await asyncio.sleep(60 * 5)
+
+        kiev_timezone = pytz.timezone('Europe/Kiev')
+        current_time_kiev = datetime.now(kiev_timezone)
+
+        mid_st = current_time_kiev.replace(hour=14, minute=0, second=0, microsecond=0)
+        mid_et = current_time_kiev.replace(hour=14, minute=30, second=0, microsecond=0)
+
+        night_st = current_time_kiev.replace(hour=21, minute=30, second=0, microsecond=0)
+        night_et = current_time_kiev.replace(hour=22, minute=00, second=0, microsecond=0)
+
+        if mid_st <= current_time_kiev < mid_et or night_st <= current_time_kiev < night_et:
+            await _send_message()
+
+
 async def main() -> None:
     await asyncio.gather(
         bot_pulling(),
         db_init(),
+        notification_init()
     )
 
 
