@@ -12,14 +12,15 @@ def get_this_month_filter() -> dict:
 
     return {
         "date__gte": first_day_of_month.replace(hour=0, minute=0, second=0),
-        "date__lte": last_day_of_month.replace(hour=0, minute=0, second=0),
+        "date__lte": last_day_of_month.replace(hour=23, minute=59, second=59),
     }
 
 
 def get_this_day_filter() -> dict:
     current_datetime = datetime.now()
     return {
-        "date": current_datetime.replace(hour=0, minute=0, second=0),
+        "date__gte": current_datetime.replace(hour=0, minute=0, second=0),
+        "date__lte": current_datetime.replace(hour=23, minute=59, second=59),
     }
 
 
@@ -45,9 +46,9 @@ class CategoriesSimilarity:
                 if j == i or j in used_indices:
                     continue
                 if (
-                    (use_similarity and self._similarity(word1, word2) > threshold)
-                    or word1 in word2
-                    or word2 in word1
+                        (use_similarity and self._similarity(word1, word2) > threshold)
+                        or word1 in word2
+                        or word2 in word1
                 ):
                     similar_words.append(word2)
                     used_indices.add(j)

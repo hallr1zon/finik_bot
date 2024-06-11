@@ -2,10 +2,16 @@ import asyncio
 import logging
 import re
 import sys
+
+try:
+    import uvloop
+except ModuleNotFoundError:
+    pass
+
 from os import getenv
 
-import uvloop
 from aiogram import Bot, Dispatcher, types, F
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -34,7 +40,7 @@ class NewMonthlyLimit(StatesGroup):
 
 
 dp = Dispatcher()
-bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
+bot = Bot(TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
 @dp.message(CommandStart())
@@ -73,7 +79,7 @@ async def process_description(message: Message, state: FSMContext) -> None:
 async def update_budget(message: types.Message):
     buttons = [
         [
-            types.InlineKeyboardButton(text="Змінити", callback_data="change_limit"),
+            types.InlineKeyboardButton(text=const.DIALOG_CHANGE_LIMIT, callback_data="change_limit"),
         ],
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -85,7 +91,7 @@ async def update_budget(message: types.Message):
 async def process_callback_button1(callback_query: types.CallbackQuery, state):
     await bot.send_message(
         callback_query.message.chat.id,
-        text="Введіть нове значення",
+        text=const.DIALOG_SET_NEW_VALUE,
         reply_markup=types.ReplyKeyboardRemove()
     )
     await state.set_state(NewMonthlyLimit.amount)
@@ -137,7 +143,7 @@ async def all_records(message: types.Message, state):
 
 
 @dp.callback_query(lambda c: re.match(r'record_\d+', c.data))
-async def process_callback_button1(callback_query: types.CallbackQuery, state):
+async def process_callback_button1(callback_query: types.CallbackQuery, _):
     record_id = callback_query.data.split("_")[-1]
     tr = await Transaction.get(id=record_id)
 
@@ -146,13 +152,13 @@ async def process_callback_button1(callback_query: types.CallbackQuery, state):
     await callback_query.bot.answer_callback_query(callback_query.id, const.DIALOG_DELETE_RECORD, )
 
 
-@dp.message(F.text.regexp('.*<-Сторінка'))
+@dp.message(F.text.regexp(f'.*{const.DIALOG_LEFT_PAGINATION}'))
 async def process_callback_button1(message: types.Message, state):
     pagination_num = message.text.split('<-')[0]
     await Transaction.all_records(message, state, pagination_num=pagination_num, next=False)
 
 
-@dp.message(F.text.regexp('Сторінка->.*'))
+@dp.message(F.text.regexp(f'{const.DIALOG_RIGHT_PAGINATION}.*'))
 async def process_callback_button1(message: types.Message, state):
     pagination_num = message.text.split('->')[-1]
     await Transaction.all_records(message, state, pagination_num=pagination_num)
@@ -176,5 +182,9 @@ async def main() -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    uvloop.install()
+    try:
+        uvloop.install()
+    except NameError:
+        pass
+
     asyncio.run(main())

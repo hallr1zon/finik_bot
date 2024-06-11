@@ -15,17 +15,17 @@ start_kb = types.ReplyKeyboardMarkup(
         ],
     ],
     resize_keyboard=True,
-    input_field_placeholder="...",
+    input_field_placeholder=const.DIALOG_LOADING_DOTS,
 )
 
 cancel_kb = types.ReplyKeyboardMarkup(
     keyboard=[
         [
-            types.KeyboardButton(text="Відміна"),
+            types.KeyboardButton(text=ACTIONS[const.CANCEL]),
         ]
     ],
     resize_keyboard=True,
-    input_field_placeholder="Повернутись до головного меню",
+    input_field_placeholder=const.DIALOG_BACK_TO_MENU,
 )
 
 
@@ -34,12 +34,12 @@ def process_pagination_keyboard(pre_number, next_number):
         keyboard=[
             [
                 types.KeyboardButton(text=ACTIONS[const.CANCEL]),
-                types.KeyboardButton(text=f"{pre_number}<-Сторінка"),
-                types.KeyboardButton(text=f"Сторінка->{next_number}"),
+                types.KeyboardButton(text=f"{pre_number}{const.DIALOG_LEFT_PAGINATION}"),
+                types.KeyboardButton(text=f"{const.DIALOG_RIGHT_PAGINATION}{next_number}"),
             ]
         ],
         resize_keyboard=True,
-        input_field_placeholder="...",
+        input_field_placeholder=const.DIALOG_LOADING_DOTS,
     )
 
     return pagination_keyboard
