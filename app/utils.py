@@ -1,5 +1,9 @@
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
-from difflib import SequenceMatcher
+
+import pymorphy2
+from sklearn.cluster import MeanShift
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def get_this_month_filter() -> dict:
@@ -23,50 +27,105 @@ def get_this_day_filter() -> dict:
         "date__lte": current_datetime.replace(hour=23, minute=59, second=59),
     }
 
-
 class CategoriesSimilarity:
-    def __init__(self, words: [set, list]):
-        self.words = sorted(list(words), key=len)
+    uk_stop_words = [
+        'та',
+        'і',
+        'в',
+        'на',
+        'у',
+        'з',
+        'до',
+        'це',
+        'що',
+        'як',
+        'за',
+        'він',
+        'вона',
+        'вони',
+        'його',
+        'її',
+        'їх',
+        'який',
+        'яка',
+        'яке',
+        'які',
+        'для',
+        'чи',
+        'але',
+        'ми',
+        'ви',
+        'так',
+        'бо',
+        'ж',
+        'аби',
+        'також',
+        'не',
+        'щоб',
+        'ще',
+        'ти',
+        'нас',
+        'нам',
+        'ним',
+        'ними',
+        'тому',
+        'усі',
+        'усіх',
+        'усе',
+        'свої',
+        'свій',
+        'того',
+        'все',
+        'всі',
+        'цей',
+        'того',
+        'ж',
+        'ну',
+        'інший',
+        'будь',
+        'може',
+        # Add more stop words as needed
+    ]
 
-    @staticmethod
-    def _similarity(a, b):
-        return SequenceMatcher(None, a, b).ratio()
+    @classmethod
+    def lemmatize_text(cls, morph, text):
+        return ' '.join([morph.parse(word)[0].normal_form for word in text.split()])
 
-    def _merge_similarities_to_dict(self, use_similarity=True, threshold=0.7):
-        merged_dict = {}
-        used_indices = set()
+    @classmethod
+    def most_repeated_word_simple(cls, strings):
+        # Split all strings into words and combine them into a single list
+        if len(strings) == 1:
+            return strings[0]
+        words = []
+        for string in strings:
+            words.extend(string.split())
 
-        for i, word1 in enumerate(self.words):
-            if i in used_indices:
-                continue
+        word_counts = Counter(words)
+        most_common_word, _ = word_counts.most_common(1)[0]
 
-            similar_words = [word1]
+        return most_common_word
 
-            for j, word2 in enumerate(self.words):
-                if j == i or j in used_indices:
-                    continue
-                if (use_similarity and self._similarity(word1, word2) > threshold) or word1 in word2 or word2 in word1:
-                    similar_words.append(word2)
-                    used_indices.add(j)
-
-            merged_dict[word1] = similar_words
-
-        return merged_dict
+    def __init__(self, words: list[str]):
+        self.words = words
+        self.morph = pymorphy2.MorphAnalyzer(lang='uk')
 
     def process(self):
-        res_similarity = self._merge_similarities_to_dict(use_similarity=True)
-        res_containing = self._merge_similarities_to_dict(use_similarity=False)
 
-        merged_dict = {**res_similarity}
+        product_names_uk_lemmatized = [self.lemmatize_text(self.morph, name.lower()) for name in self.words]
 
-        for key, value in res_containing.items():
-            is_unique_key = []
-            for values in res_similarity.values():
-                if key in values:
-                    is_unique_key.append(False)
-                else:
-                    is_unique_key.append(True)
-            if all(is_unique_key):
-                merged_dict[key] = value
+        vectorizer = TfidfVectorizer(stop_words=self.uk_stop_words)
+        X = vectorizer.fit_transform(product_names_uk_lemmatized)
 
-        return merged_dict
+        meanshift = MeanShift()
+        meanshift.fit(X.toarray())
+        labels = meanshift.labels_
+
+        clusters = defaultdict(list)
+        for product, label in zip(self.words, labels):
+            clusters[label].append(product)
+
+        naming_clusters = defaultdict(list)
+        for cluster, products in clusters.items():
+            naming_clusters[self.most_repeated_word_simple(products).lower()] = products
+
+        return dict(naming_clusters)
