@@ -27,6 +27,7 @@ def get_this_day_filter() -> dict:
         "date__lte": current_datetime.replace(hour=23, minute=59, second=59),
     }
 
+
 class CategoriesSimilarity:
     uk_stop_words = [
         'та',
