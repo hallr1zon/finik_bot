@@ -35,7 +35,6 @@ TOKEN = getenv("BOT_TOKEN")
 class FormRecord(StatesGroup):
     amount = State()
     category = State()
-    description = State()
 
 
 class NewMonthlyLimit(StatesGroup):
@@ -70,11 +69,6 @@ async def process_amount(message: Message, state: FSMContext) -> None:
 
 @dp.message(FormRecord.category)
 async def process_category(message: Message, state: FSMContext) -> None:
-    await Transaction.prepare_category(message, state)
-
-
-@dp.message(FormRecord.description)
-async def process_description(message: Message, state: FSMContext) -> None:
     await Transaction.add_transaction(message, state)
 
 

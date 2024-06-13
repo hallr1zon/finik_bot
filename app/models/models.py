@@ -14,7 +14,8 @@ from tortoise.functions import Sum
 
 from app import constants as const
 from app.keyboards import cancel_kb, process_pagination_keyboard, start_kb
-from app.utils import CategoriesSimilarity, get_this_day_filter, get_this_month_filter
+from app.utils import (CategoriesSimilarity, get_this_day_filter,
+                       get_this_month_filter)
 
 env_vars = dotenv_values(".env")
 
@@ -105,17 +106,10 @@ class Transaction(Model):
         await state.set_state(FormRecord.category)
 
     @classmethod
-    async def prepare_category(cls, message: Message, state: FSMContext):
-        from main import FormRecord
-
-        await state.update_data(category=message.text)
-        await message.answer(const.DIALOG_DESCRIBE_CATEGORY, reply_markup=cancel_kb)
-        await state.set_state(FormRecord.description)
-
-    @classmethod
     async def add_transaction(cls, message: Message, state: FSMContext):
         try:
-            await state.update_data(description=message.text)
+            await state.update_data(category=message.text)
+            await state.update_data(description="---")
             data = await state.get_data()
             user = await User.get_or_none(telegram_id=message.chat.id)
             await Transaction.create(**data, user_id=user.id)
